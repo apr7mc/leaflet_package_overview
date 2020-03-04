@@ -425,7 +425,7 @@ pander::pander(mytable, keep.line.breaks = TRUE, style = 'grid', justify = 'left
 | Pros                                            | Cons                                      |
 |-------------------------------------------------|-------------------------------------------|
 | Used by professionals; it is scalable and reliable | Has its own syntax; slight learning curve |
-| Can use a multitude of map files                | Redundant functionalities                 |
+| Can use a multitude of map views                | Redundant functionalities                 |
 | Many customizable features                      |                                           |
 ---
 
