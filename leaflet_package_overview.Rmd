@@ -1,0 +1,456 @@
+---
+title: "Leaflet Package Overview"
+author: "Ally Renehan, Lauren Perry, and Zach Martin"
+date: "3/4/2020"
+output: 
+  html_document:
+      toc: TRUE
+      toc_float: TRUE
+      theme: yeti
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+### ***An Interactive Mapping R Package***
+
+# Background Information
+Released in 2015, the Leaflet package "revolutionized interactive web map creation from within R" (Lovelace, 2020). Leaflet sought to make creating pretty, interactive mobile maps simple and easy to understand. 
+
+Wildly popular, Leaflet is now used by a multitude of famous websites and GIS specialists, like the New York Times and Mapbox, for its open-source Javascript library for interactive maps (Agafonkin, 2016).
+
+### Version History
+| Version Number | Release Date   |
+|----------------|----------------|
+| 1\.0\.0        | June 19, 2015  |
+| 1\.0\.1        | Feb\. 25, 2016 |
+| 1\.1\.0        | Feb\. 17, 2017 |
+| 2\.0\.0        | Apr\. 20, 2018 |
+| 2\.0\.1        | June 4, 2018   |
+| 2\.0\.2        | Aug\. 27, 2018 |
+| 2\.0\.3        | Nov\. 14, 2019 |
+
+(Cheng, 2019)
+
+---
+
+## Usage of and Dependency to Other Packages {.tabset .tabset.fade}
+Since it was developed on top of the *htmlwidgets* package, Leaflet can render maps in R markdowns, Rstudio IDE, and shiny apps (Xie, 2015). 
+
+
+### Imports
+Leaflet imports the following packages:
+
+* base64enc
+* crosstalk
+* htmltools
+* htmlwidgets
+* leaflet.providers (>= 1.8.0)
+* magrittr
+* markdown
+* methods
+* png
+* raster
+* RColorBrewer
+* scales (>= 1.0.0)
+* sp
+* stats
+* viridis (>= 0.5.1)
+
+(Cheng, 2019)
+
+---
+
+### Suggests
+Leaflet suggests the following packages:
+
+* knitr
+* maps
+* purrr
+* R6
+* rgdal
+* rgeos
+* RJSONIO
+* sf
+* shiny
+* testthat
+
+(Cheng, 2019)
+
+---
+
+# Usage
+The main capabilities of this package all serve to add components to the map to communicate information or make the map easier to understand. The principal functionalities are:
+
+* to initialize the window
+* to create map
+* to add shapes
+* to add colors
+* to add markers
+* to add popups & labels
+* to add legend
+* to add layers
+
+## Example {.tabset .tabset.fade}
+To illustrate the functions of each of the above capabilities, we created an example by mapping some restaurant locations over census tract populations in Charlottesville, VA. The sections below will go through the main functionalities individually.
+```{r  libraries, echo = FALSE, warning=FALSE, include=FALSE}
+library(rgdal)
+library(tidyverse)
+library(leaflet)
+library(htmltools)
+```
+
+### Initialize
+Initializing creates the window for other functions to add to.
+
+It uses these functions:
+
+* **`leaflet()`**
+* `leafletOptions()`: sets minZoom and maxZoom
+* `setView()`: sets the center of the map view and the zoom level
+* `fitBounds()`: fits the view into the rectangle 
+* `clearBounds()`: clears the bound, so that the view will be automatically determined by the range of latitude/longitude data in the map layers if provided
+
+Code:
+
+```{r initialize2}
+# Initializing the window
+leaflet()
+```
+
+---
+
+### Create
+Creating the map requires "tiles" that tell Leaflet what type of map to output.
+
+It uses these functions:
+
+* **`addTiles()`**: adding OpenStreetMap base map
+* `addProviderTiles()`: adding third-party provided base maps (via plugin)
+* `addWMSTiles()`: adding Web Map Services tiles (via the internet)
+
+Code:
+```{r addTiles}
+# Adding tiles will make an actual map appear in the window; default Leaflet map 
+# (Set on Charlottesville)
+leaflet() %>% addTiles() %>% setView(lng = -78.4766781, lat = 38.0293059, zoom = 12)
+
+# Satellite image map of Charlottesville
+leaflet() %>% setView(lng = -78.4766781, lat = 38.0293059, zoom = 12) %>%
+  addProviderTiles(providers$Esri.WorldImagery)
+
+# National Geographic style map of Charlottesville
+leaflet() %>% setView(lng = -78.4766781, lat = 38.0293059, zoom = 12) %>%
+  addProviderTiles(providers$Esri.NatGeoWorldMap)
+
+```
+
+---
+
+### Shapes
+Adding shapes allows users to put in country, state, etc. shapes in the map to connect to data. 
+
+It uses these functions: 
+
+* **`addPolygons()`**: adds map shapes (countries, states, counties, etc.)
+* `addCircles()`: adds circle with given radius around a point
+* `addRectangles()`: adds a rectangle with 4 given points
+
+Code:
+```{r initialize, results=FALSE}
+# Importing census data from Charlottesville
+tracts <- readOGR('US_Census_Tract_Area_2010.shp', GDAL1_integer64_policy = TRUE)
+```
+
+```{r shapes}
+# Initializing the window with our desired area data points and 
+# adding polygons to make visible the census tracts we instantiated in leaflet() 
+leaflet(tracts) %>% addTiles() %>% addPolygons(weight = 1, 
+                                               smoothFactor = 0.5,
+                                               opacity = 1.0, 
+                                               fillOpacity = 0.2,
+                                               highlightOptions = 
+                                                 highlightOptions(color = "white", 
+                                                                weight = 2,
+                                                                bringToFront = TRUE)) 
+
+```
+
+---
+
+### Colors
+Adding colors to a map can help convey more information within the visual. 
+
+It uses these functions: 
+
+* **`colorNumeric()`**: continuous input, continuous colors
+* `colorBin()`, `colorQuantile()`: continuous input, discrete colors
+* `colorFactor()`: categorical input
+
+Code:
+```{r color}
+# Instantiating a color palette
+pal <- colorNumeric(palette = "Blues",
+                    domain = as.numeric(tracts$Population))
+
+# Using that palette for our map
+leaflet(tracts) %>% addTiles() %>% 
+  addPolygons(color = ~pal(tracts$Population),
+              weight = 1, 
+              smoothFactor = 0.5,
+              opacity = 1.0,
+              fillOpacity = 0.5,
+              highlightOptions = highlightOptions(color = "white", 
+                                                  weight = 2, 
+                                                  bringToFront = TRUE)) 
+
+```
+
+---
+
+### Markers
+Markers are used to highlight points on the map to add more information to the display.
+
+It uses these functions:
+
+* **`addMarker()`**, `addAwesomeMarker()`: adding icon marker (default is dropped pin)
+* `makeIcon()`, `makeAwesomeIcon()`: customizing icon markers
+* `iconList()`, `awesomeIconList()`: set of icons with varying parameters
+* `clusterMarkers()`, `clusterMarkerOptions()`: clustering large quantities of markers (when you zoom out they combine into one icon)
+* `addCircleMarkers()`: adds circle markers with constant radius
+
+Code:
+```{r marker}
+# Importing data about cville restaurants
+food <- read.csv('cville_food.csv', header = TRUE)
+
+# Adding default markers
+leaflet(data = food) %>% addTiles() %>% addMarkers(~long, ~lat)
+
+# Marker icons can be personalized as well
+restIcons <- icons(
+  iconUrl = "https://image.flaticon.com/icons/svg/433/433087.svg",
+  iconWidth = 38, iconHeight = 95
+)
+
+# Adding the icons to the map
+leaflet(data = food) %>% addTiles() %>% addMarkers(~long, ~lat, icon = restIcons)
+```
+
+---
+
+### Labels
+Popups and labels are good ways to explain what a marker is or represents, without overcrowding the visual. Labels appear when a marker is moused over. Popups appear when a marker is clicked on.
+
+They use these functions:
+
+* `addPopups()`: add popups to map
+* Popups also work as an argument of `addMarkers()` when you want information to appear when you click a marker
+* Labels work as an argument of `addMarkers()` when you want information to appear when you hover over a marker
+* `labelOptions()`
+* Labels without markers: `addLabelOnlyMarkers()`
+
+Code:
+```{r popups}
+leaflet() %>% 
+  addTiles() %>% 
+  addTiles(group = "Street View") %>%
+# Adding labels and popups to the map via parameters within addMarkers()
+  addMarkers(data = food %>% filter(food$cost == '$'), group = '$', ~long, ~lat, icon = restIcons, 
+             label = ~htmlEscape(name), popup = ~htmlEscape(address)) %>%
+  addMarkers(data = food %>% filter(food$cost == '$$'), group = '$$', ~long, ~lat, icon = restIcons, 
+             label = ~htmlEscape(name), popup = ~htmlEscape(address)) %>%
+  addMarkers(data = food %>% filter(food$cost == '$$$'), group = '$$$', ~long, ~lat, icon = restIcons, 
+             label = ~htmlEscape(name), popup = ~htmlEscape(address))
+```
+
+---
+
+### Legends
+Legends explain what some of the markers or colors represent on the map. This enables more information to be on visual without overcrowding the page.
+
+Its main function is:
+
+* **`addLegend()`**
+
+Code:
+```{r legend}
+
+leaflet(tracts) %>% addTiles() %>% 
+  addPolygons(color = ~pal(as.numeric(tracts$Population)),
+              weight = 1, 
+              smoothFactor = 0.5,
+              opacity = 1.0,
+              fillOpacity = 0.5,
+              highlightOptions = highlightOptions(color = "white", 
+                                                weight = 2, 
+                                                bringToFront = TRUE)) %>% 
+# Adding a legend to the top left of the window to illustrate which 
+# shading levels correspond to populations
+  addLegend("topleft",
+            pal = pal, 
+            values = as.numeric(tracts$Population), 
+            title = "Est. Population (2010)", 
+            labFormat = labelFormat(suffix = " citizens"), 
+            opacity = 1)
+```
+
+---
+
+### Layers
+Layers are another way to fit more information onto the map without overcrowding. In our example, it looks like adding a filter on restaurant markers-- allowing the users to decide which type of restaurant (layer) they want to see.
+
+Its main function is:
+
+* **`addLayersControl()`**: adds box that allows you to control which layers you see
+
+Code:
+```{r layers}
+leaflet() %>% 
+  addTiles() %>% 
+  addTiles(group = "Street View") %>%
+  addProviderTiles(providers$Esri.WorldImagery, group = "Satellite") %>%
+  addMarkers(data = food %>% filter(food$cost == '$'), group = '$', ~long, ~lat, icon = restIcons, 
+             label = ~htmlEscape(name), popup = ~htmlEscape(address)) %>%
+  addMarkers(data = food %>% filter(food$cost == '$$'), group = '$$', ~long, ~lat, icon = restIcons, 
+             label = ~htmlEscape(name), popup = ~htmlEscape(address)) %>%
+  addMarkers(data = food %>% filter(food$cost == '$$$'), group = '$$$', ~long, ~lat, icon = restIcons, 
+             label = ~htmlEscape(name), popup = ~htmlEscape(address)) %>%
+  # Adding Layers to the map of different map views or different price ranges of restaurants
+  addLayersControl(baseGroups = c("Street View", "Satellite"), 
+                   overlayGroups = c('$','$$', '$$$'),
+                   options = layersControlOptions(collapsed = FALSE))
+```
+
+---
+
+## Final product
+
+Wrapping all of the functionalities into one, the final product will look like:
+
+```{r finished_map, warning=FALSE}
+
+leaflet() %>% 
+  addTiles() %>% 
+  addTiles(group = "Street View") %>%
+  addProviderTiles(providers$Esri.WorldImagery, group = "Satellite") %>%
+  addMarkers(data = food %>% filter(food$cost == '$'), group = '$', ~long, ~lat, icon = restIcons, 
+             label = ~htmlEscape(food$name), popup = ~htmlEscape(food$address)) %>%
+  addMarkers(data = food %>% filter(food$cost == '$$'), group = '$$', ~long, ~lat, icon = restIcons, 
+             label = ~htmlEscape(food$name), popup = ~htmlEscape(food$address)) %>%
+  addMarkers(data = food %>% filter(food$cost == '$$$'), group = '$$$', ~long, ~lat, icon = restIcons, 
+             label = ~htmlEscape(food$name), popup = ~htmlEscape(food$address)) %>%
+  addLayersControl(baseGroups = c("Street View", "Satellite"),
+                   overlayGroups = c('$','$$', '$$$'),
+                   options = layersControlOptions(collapsed = FALSE)) %>%
+  addPolygons(data = tracts,
+              color = ~pal(tracts$Population),
+              weight = 1, 
+              smoothFactor = 0.5,
+              opacity = 1.0,
+              fillOpacity = 0.5,
+              highlightOptions = highlightOptions(color = "white", weight = 2, 
+                                                  bringToFront = TRUE)) %>% 
+  addLegend("topleft",
+            pal = pal, 
+            values = as.numeric(tracts$Population), 
+            title = "Est. Population (2010)", 
+            labFormat = labelFormat(suffix = " citizens"), 
+            opacity = 1)
+```
+
+
+
+# Similar Packages
+There are multiple packages in R that also create maps. While Leaflet creates interactive maps designed for mobile use, other packages address various other types of mapping. The function `plot()` is in basic R and allows for low level control for static maps. The *grid* package is another basic R package to make maps, but has limited capabilities. Focusing on  interactive mapping packages allows for closer analysis between relevant ones.
+
+### Other Interactive Map-Making Packages {.tabset .tabset.fade}
+
+There are three other popular mapping packages: *ggplot2, tmap,* and *mapview*. 
+
+#### Ggplot2
+
+The *ggplot2* package is widely used and accepted, primarily because its "grammar of graphics" syntax is easy to use and understand. The *ggplot2* package has many of the same capabilities to manipulate aesthetics as Leaflet that allow the user to customize their graph. The *ggplot2* package can create static maps in addition to using wrapper packages such as `ggiraph()`, `ggplotly()` and `gganimate()` to create interactive and animated maps.
+
+(Lovelace, 2020)
+
+---
+
+#### Tmap
+
+The *tmap* package can create static, animated and interactive maps with minimal code. *tmap* uses the "grammar of graphics" syntax, similar to *ggplot2*.
+
+(Lovelace, 2020)
+
+---
+
+#### Mapview
+
+The *mapview* package can create static, animated and interactive maps. The *mapview* package is considered the "data-driven leaflet" package because of it's advanced control of layering geographic objects.
+
+(Appelhans, n.d.), (Lovelace, 2020) 
+
+---
+
+### Advantages and Disadvantages
+
+The table below shows advantages and disadvantages to each package.
+
+```{r, echo = FALSE, warning = FALSE, include = FALSE}
+library(pander)
+```
+
+```{r table, echo=FALSE, warning=FALSE}
+mytable = data.frame(
+    Package     = c("Leaflet", "ggplot2", "Tmap", "Mapview"),
+    Advantages = c("* Creates exceptional dynamic maps\ \n* Has many aesthetic features that make maps popular in R community\ \n* Works with `shiny()` to post interactive maps to websites\ \n* Accepts many types of map objects\ \n* Can create mobile maps\ \n* Highly flexible", "* Uses “grammar of graphics” syntax\ \n* Large user-community\ \n* Many add-on packages to add additional features\ \n* Highly flexible", "* Uses “grammar of graphics” syntax\ \n* Can set options globally for all maps in code using `tmap_options()` \ \n* Can export tmap maps to leaflet to add leaflet functionality and use shiny\ \n* Interactive and static maps can be made with same code\ \n* Accepts many types of map objects", "* Powerful \ \n* Accepts many types of map objects\ \n* Many interactive features\ \n* Easy way to create an interactive map with simple code"),
+    Disadvantages     = c("* Has own syntax\ \n* Static maps are not as good as ggplot2’s static maps", "* Requires a `data.frame` object so data needs to converted to a dataframe using `tidy()`\ \n* Interactive maps are not as good as leaflet’s\ \n* Have to implement wrapper packages to make graphs interactive or animated (for example: `ggiraph()` or `plotly()`)", "* Not as widely used\ \n* Syntax is not widely known", "* Not as widely used\ \n* Syntax is not widely known"))
+
+pander::pander(mytable, keep.line.breaks = TRUE, style = 'grid', justify = 'left')
+```
+
+(Lovelace, 2020)
+
+---
+
+# Reflection
+
+*Overall, Leaflet is an incredibly powerful tool for geographic data visualization.This package offers many impressive tools that are easy to implement in a professional and aesthetically pleasing way.*
+
+### Pro/Cons
+
+| Pros                                            | Cons                                      |
+|-------------------------------------------------|-------------------------------------------|
+| Used by professionals; it is scalable and reliable | Has its own syntax; slight learning curve |
+| Can use a multitude of map files                | Redundant functionalities                 |
+| Many customizable features                      |                                           |
+---
+
+### Suggestions for Improvement
+
+* Simplifying functionalities-- too many ways to do the same thing
+
+---
+
+# References
+Agafonkin, V. (2016). *Leaflet for R*. Retrieved from http://rstudio.github.io/leaflet/
+
+Appelhans, T., Detsch, F., Reudenbach, C., & Woellauer, S. (n.d.). *Interactive Viewing of Spatial Data in R.* Retrieved March 3, 2020, from https://r-spatial.github.io/mapview/
+
+Basille, M., & Moreno, M. (2018). *Drawing beautiful maps programmatically with R, sf and ggplot2—Part 1: Basics.* R-Spatial. https://www.r-spatial.org/r/2018/10/25/ggplot2-sf.html
+
+Cheng, J. (2019). leaflet v2.0.3. Retrieved from https://www.rdocumentation.org/packages/leaflet/versions/2.0.3
+
+Lovelace, R., Nowosad, J., & Muenchow, J. (2020, February 16). *Geocomputation with R.* Retrieved from https://geocompr.robinlovelace.net/adv-map.html
+
+Xie, Y. (2015). *Leaflet: Interactive web maps with R.* Retrieved from https://blog.rstudio.com/2015/06/24/leaflet-interactive-web-maps-with-r/
+
+
+
+### Data Retrieved From: 
+https://opendata.charlottesville.org/datasets/us-census-tract-area-2010
+
+and Google
